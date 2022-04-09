@@ -1,6 +1,5 @@
 ## Cyber Butchers 
-pure front end message board
-loop 20 messages
-language:javascript
-framework:Bootstrap,Vue.js
-database:firebase
+pure front end message board  
+language:javascript  
+framework:Bootstrap,Vue.js  
+database:firebase  
