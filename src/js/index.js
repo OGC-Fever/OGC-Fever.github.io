@@ -1,4 +1,4 @@
-import { createApp } from './vue'
+import { createApp } from 'vue'
 import navbar from "../vue/navbar.vue"
 import map from "../vue/map.vue"
 import about from "../vue/about.vue"
