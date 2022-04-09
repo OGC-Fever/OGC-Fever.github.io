@@ -1,0 +1,16 @@
+#map {
+    height: 90vh;
+    filter: brightness(.75);
+}
+
+body {
+    overflow: clip;
+}
+
+.navbar {
+    height: 10%;
+}
+
+.contain {
+    height: 90%;
+}
