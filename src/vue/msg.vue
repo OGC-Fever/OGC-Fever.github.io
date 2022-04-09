@@ -207,6 +207,7 @@ function post() {
 					flag: id,
 				})
 				init()
+				fab.value = 0
 			})
 	}
 }
