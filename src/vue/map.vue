@@ -302,7 +302,7 @@ function paste_url() {
 
 function map_icon(element) {
 	let icon = L.icon({
-		iconUrl: `./pic/${element}.png`,
+		iconUrl: `./src/pic/${element}.png`,
 		iconSize: [40, 40],
 		popupAnchor: [0, -10],
 	});
