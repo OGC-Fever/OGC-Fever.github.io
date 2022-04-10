@@ -18,7 +18,7 @@
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Plate</div>
 				<input
-					class="col rounded border py-2 bg-dark border-secondary text-light me-1"
+					class="col rounded border py-2 bg-dark border-secondary text-light me-1 text-uppercase"
 					type="text"
 					placeholder="ABC-1234"
 					v-model="input.plate"
@@ -154,21 +154,10 @@ const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider('6LcBNv4dAAAAAIvtoqY-KvLMdO1rTdPFhM2uxlYW'),
 });
 
-let map, lat, lng, marker_point;
+let map, lat, lng, marker_point, map_center;
 let marker = L.marker();
 let input = ref({ type: "car" });
 let roundto = 7;
-
-function read(index) {
-	onValue(gref(db, `/map/${index}`), (e) => {
-		let data = e.val();
-		try {
-			messages.value[index] = { msg: data.msg, date: data.date, bg: data.bg, nic: data.nic };
-		} catch (error) {
-			messages.value[index] = { msg: "", date: "", bg: random_bg(), nic: "" };
-		}
-	});
-}
 
 function post() {
 	let id
@@ -243,7 +232,7 @@ function clear() {
 	map.removeLayer(marker);
 }
 
-function map_init() {
+async function map_init() {
 	if (navigator.geolocation) {
 		navigator.geolocation.getCurrentPosition((location) => {
 			lat = location.coords.latitude;
@@ -262,35 +251,21 @@ function map_init() {
 				.bindPopup("you're here")
 				.openPopup();
 			map.on("click", mouse_click);
-			// map.on("mouseup", test)
-			// alert(map.getCenter())
+			map.on("mouseup", center)
 		});
 	}
 }
 
-// let tag = [
-//     { plate: "test1", location: [24.51, 121.1] },
-//     { plate: "test2", location: [24.11, 121.1] },
-// ];
-// let html = "<div>fuck</div>";
-// tag.forEach(element => {
-//     L.marker(element.location).addTo(this.map).bindPopup(element.plate + html);
-// });
-// });
-// }
-// }
+function center() {
+	map_center = map.getCenter()
+}
 
 function mouse_click(point) {
 	marker_point = point;
 	let type = input.value.type;
-	let icon = L.icon({
-		iconUrl: `./pic/${type}.png`,
-		iconSize: [40, 40],
-		popupAnchor: [0, -10],
-	});
 	let roundto = 7;
 	map.removeLayer(marker);
-	marker = L.marker(point.latlng, { icon: icon })
+	marker = L.marker(point.latlng, { icon: map_icon(type) })
 		.addTo(map)
 		.bindPopup("SamBao is here")
 		.openPopup();
@@ -301,13 +276,8 @@ function mouse_click(point) {
 
 function change_type() {
 	let type = input.value.type;
-	let icon = L.icon({
-		iconUrl: `./pic/${type}.png`,
-		iconSize: [40, 40],
-		popupAnchor: [0, -10],
-	});
 	map.removeLayer(marker);
-	marker = L.marker(marker_point.latlng, { icon: icon })
+	marker = L.marker(marker_point.latlng, { icon: map_icon(type) })
 		.addTo(map)
 		.bindPopup("SamBao is here")
 		.openPopup();
@@ -330,10 +300,63 @@ function paste_url() {
 	});
 }
 
-onMounted(() => {
-	map_init();
+function map_icon(element) {
+	let icon = L.icon({
+		iconUrl: `./pic/${element}.png`,
+		iconSize: [40, 40],
+		popupAnchor: [0, -10],
+	});
+	return icon
+}
+
+async function read() {
+	let tag = []
+	let count = await get(gref(db, "/map/count"))
+	for (let index = 1; index <= count.val(); index++) {
+		tag.push(await (await get(gref(db, `/map/${index}`))).val())
+	}
+	tag.forEach(element => {
+		let html = `
+		<table width="250px">
+			<tr>
+				<td width="100px">Nickname</td>
+				<td width="150px">${element.nickname}</td>
+			</tr>
+			<tr>
+				<td>Plate</td>
+				<td>${element.plate}</td>
+			</tr>
+			<tr>
+				<td>Date</td>
+				<td>${element.date}</td>
+			</tr>
+			<tr>
+				<td>Time</td>
+				<td>${element.time}</td>
+			</tr>
+			<tr>
+				<td>Behavior</td>
+				<td>${element.behavior}</td>
+			</tr>
+			<tr>
+				<td>Address</td>
+				<td>${element.address}</td>
+			</tr>
+			<tr>
+				<td>Appendix</td>
+				<td><a href=${element.appendix} target="_blank">Link</a></td>
+			</tr>
+		</table>`;
+		L.marker(element.latlng.split(","), { icon: map_icon(element.type) }).addTo(map)
+			.bindPopup(html);
+	});
+}
+
+onMounted(async () => {
+	await map_init();
 	if (nav.value.show_map) {
 		window.addEventListener("focus", paste_url);
 	}
+	await read()
 });
 </script>
