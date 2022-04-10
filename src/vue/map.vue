@@ -1,4 +1,4 @@
-navpage<template>
+<template>
 	<div class="row me-auto" v-show="nav.show_map == true">
 		<div class="col-8 mt-1 ps-1">
 			<div id="map"></div>
@@ -8,24 +8,24 @@ navpage<template>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Nickname</div>
 				<input
-					class="col rounded border py-2 bg-dark text-light"
+					class="col rounded border py-2 bg-dark text-light border-secondary"
 					type="text"
 					placeholder="300哥/祭央乂/馬維拉/韓總機"
-					v-model="data.nickname"
+					v-model="input.nickname"
 					maxlength="20"
 				/>
 			</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Plate</div>
 				<input
-					class="col rounded border py-2 bg-dark text-light me-1"
+					class="col rounded border py-2 bg-dark border-secondary text-light me-1"
 					type="text"
 					placeholder="ABC-1234"
-					v-model="data.plate"
+					v-model="input.plate"
 				/>
 				<select
-					class="col-4 py-2 rounded border bg-dark text-light"
-					v-model="data.type"
+					class="col-4 py-2 rounded border-secondary border bg-dark text-light"
+					v-model="input.type"
 					@change="change_type"
 				>
 					<option value="human">Human</option>
@@ -36,40 +36,53 @@ navpage<template>
 			</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Date/Time</div>
-				<input class="col border rounded py-2 me-1 bg-dark text-light" v-model="data.date" type="date" />
-				<input class="col-4 border rounded py-2 bg-dark text-light" v-model="data.time" type="time" />
+				<input
+					class="col border rounded py-2 me-1 bg-dark text-light border-secondary"
+					v-model="input.date"
+					type="date"
+				/>
+				<input
+					class="border-secondary col-4 border rounded py-2 bg-dark text-light"
+					v-model="input.time"
+					type="time"
+				/>
 			</div>
 
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Behavior</div>
 				<textarea
-					class="col py-2 border rounded bg-dark text-light"
+					class="col py-2 border rounded bg-dark text-light border-secondary"
 					type="text"
 					placeholder="How SanBau?"
 					maxlength="100"
-					v-model="data.behavior"
+					v-model="input.behavior"
 				></textarea>
 			</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Address</div>
 				<textarea
-					class="col py-2 border rounded bg-dark text-light"
+					class="col py-2 border rounded bg-dark text-light border-secondary"
 					type="text"
 					placeholder="Where? (option)"
 					maxlength="100"
-					v-model="data.address"
+					v-model="input.address"
 				></textarea>
 			</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Lat, Lng</div>
 				<input
-					class="col border rounded bg-dark text-light py-2"
+					class="col border rounded bg-dark text-light py-2 border-secondary"
 					type="text"
 					placeholder="Location"
-					v-model="data.latlng"
+					v-model="input.latlng"
 					maxlength="30"
 				/>
-				<div class="badge col-2 text-warning" type="button" @click="get_location">
+				<div
+					class="badge col-2 text-warning"
+					title="get currten latlng"
+					type="button"
+					@click="get_location"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						width="32"
@@ -88,37 +101,126 @@ navpage<template>
 			<div class="row align-items-center">
 				<div class="col-3 ps-2">appendix</div>
 				<input
-					class="col border rounded py-2 bg-dark text-secondary"
+					class="col border border-secondary rounded py-2 bg-dark text-secondary"
 					type="url"
 					placeholder="upload image/video"
-					v-model="data.link"
+					v-model="input.link"
 					@click="open_link"
 				/>
-				<div class="col-2" @click="upload" type="button">
+				<div class="col-2" @click="upload" type="button" title="link to imgur">
 					<img class="w-100" src="https://s.imgur.com/images/favicon.png" />
 				</div>
 			</div>
 			<div class="row mt-2 justify-content-center">
-				<div class="col-3 badge fs-6 border text-success me-1 ms-1 py-2" type="button" @click="add">Add</div>
-				<div class="col-3 badge fs-6 border text-danger py-2" type="button" @click="clear">Clear</div>
+				<div
+					class="col-3 badge fs-6 border border-secondary text-success me-1 ms-1 py-2"
+					type="button"
+					@click="post"
+				>Add</div>
+				<div
+					class="col-3 badge fs-6 border border-secondary text-danger py-2"
+					type="button"
+					@click="clear"
+				>Clear</div>
 			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
+import { initializeApp } from 'firebase/app';
+// import { getAnalytics } from "firebase/analytics";
+import { getDatabase, ref as gref, set, onValue, get, child, update } from "firebase/database";
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { nav } from "../js/global.mjs";
 import { ref, onMounted } from "vue";
 import L from "leaflet";
 
+const firebaseConfig = {
+	apiKey: "AIzaSyAEvJzElQdmOL_8buY2qFP2A95inwU0Aug",
+	authDomain: "cyber-butchers.firebaseapp.com",
+	databaseURL:
+		"https://cyber-butchers-default-rtdb.asia-southeast1.firebasedatabase.app",
+	projectId: "cyber-butchers",
+	storageBucket: "cyber-butchers.appspot.com",
+	messagingSenderId: "904143225733",
+	appId: "1:904143225733:web:3d16dd6d240892a5a5baec",
+	measurementId: "G-QBBG1SGW3K"
+};
+const app = initializeApp(firebaseConfig);
+// const analytics = getAnalytics(app);
+const db = getDatabase(app);
+const appCheck = initializeAppCheck(app, {
+	provider: new ReCaptchaV3Provider('6LcBNv4dAAAAAIvtoqY-KvLMdO1rTdPFhM2uxlYW'),
+});
+
 let map, lat, lng, marker_point;
 let marker = L.marker();
-let data = ref({ type: "car" });
+let input = ref({ type: "car" });
 let roundto = 7;
+
+function read(index) {
+	onValue(gref(db, `/map/${index}`), (e) => {
+		let data = e.val();
+		try {
+			messages.value[index] = { msg: data.msg, date: data.date, bg: data.bg, nic: data.nic };
+		} catch (error) {
+			messages.value[index] = { msg: "", date: "", bg: random_bg(), nic: "" };
+		}
+	});
+}
+
+function post() {
+	let id
+	let data = {
+		nickname: input.value.nickname,
+		plate: input.value.plate,
+		type: input.value.type,
+		date: input.value.date,
+		time: input.value.time,
+		behavior: input.value.behavior,
+		address: input.value.address,
+		latlng: input.value.latlng,
+		appendix: input.value.appendix
+	}
+	if (data.nickname == null || data.plate == null || data.date == null || data.time == null || data.behavior == null || data.latlng == null) {
+		return
+	}
+	if (data.plate != null && data.type == "human") {
+		return
+	}
+	for (let key in data) {
+		if (data[key] == null) {
+			data[key] = ""
+		}
+	}
+	get(gref(db, "/map/count")).then((e) => {
+		try {
+			id = e.val() + 1
+		} catch (error) {
+			id = 1
+		}
+		set(gref(db, `/map/${id}`), {
+			nickname: data.nickname,
+			plate: data.plate,
+			type: data.type,
+			behavior: data.behavior,
+			address: data.address,
+			date: data.date,
+			time: data.time,
+			latlng: data.latlng,
+			appendix: data.appendix
+		});
+		update(gref(db, '/map/'), {
+			count: id,
+		})
+	})
+	clear()
+}
 
 function get_location() {
 	map.setView([lat, lng]);
-	data.value.latlng = `${lat.toFixed(roundto)}, ${lng.toFixed(roundto)}`;
+	input.value.latlng = `${lat.toFixed(roundto)}, ${lng.toFixed(roundto)}`;
 	map.removeLayer(marker);
 	L.marker([lat, lng]).addTo(map).bindPopup("you're here").openPopup();
 }
@@ -127,21 +229,17 @@ function upload() {
 	window.open("https://imgur.com/upload");
 }
 
-function add() {
-	clear();
-}
-
 function open_link() {
-	if (data.value.link != "" && data.value.link != null) {
+	if (input.value.link != "" && input.value.link != null) {
 		if (confirm("open link in new window?")) {
-			window.open(data.value.link);
+			window.open(input.value.link);
 		}
 	}
 }
 
 function clear() {
-	data.value = [];
-	data.value.type = "car";
+	input.value = [];
+	input.value.type = "car";
 	map.removeLayer(marker);
 }
 
@@ -164,6 +262,8 @@ function map_init() {
 				.bindPopup("you're here")
 				.openPopup();
 			map.on("click", mouse_click);
+			// map.on("mouseup", test)
+			// alert(map.getCenter())
 		});
 	}
 }
@@ -182,7 +282,7 @@ function map_init() {
 
 function mouse_click(point) {
 	marker_point = point;
-	let type = data.value.type;
+	let type = input.value.type;
 	let icon = L.icon({
 		iconUrl: `./pic/${type}.png`,
 		iconSize: [40, 40],
@@ -194,13 +294,13 @@ function mouse_click(point) {
 		.addTo(map)
 		.bindPopup("SamBao is here")
 		.openPopup();
-	data.value.latlng = `${point.latlng.lat.toFixed(
+	input.value.latlng = `${point.latlng.lat.toFixed(
 		roundto
 	)}, ${point.latlng.lng.toFixed(roundto)}`;
 }
 
 function change_type() {
-	let type = data.value.type;
+	let type = input.value.type;
 	let icon = L.icon({
 		iconUrl: `./pic/${type}.png`,
 		iconSize: [40, 40],
@@ -219,13 +319,13 @@ function paste_url() {
 			if (clipText.length > 1) {
 				let resp = await fetch(clipText, { mode: "no-cors" });
 				if (resp.status != 404) {
-					data.value.link = clipText;
+					input.value.link = clipText;
 				} else {
-					data.value.link = "";
+					input.value.link = "";
 				}
 			}
 		} catch (error) {
-			data.value.link = "";
+			input.value.link = "";
 		}
 	});
 }

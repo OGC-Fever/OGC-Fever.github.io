@@ -1,6 +1,6 @@
 #map {
     height: 90vh;
-    filter: brightness(.75);
+    filter: brightness(.5) contrast(2) saturate(1.5);
 }
 
 body {

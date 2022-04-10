@@ -1,4 +1,4 @@
-navpage<template>
+<template>
 	<div class="container-fluid d-flex pe-0 navtxt">
 		<div class="navbar-brand text-light" type="button" @click="map">Cyber Butchers</div>
 		<div class="navbar-brand fs-6" :class="text_class.map" type="button" @click="map">SanBau Map</div>
@@ -9,7 +9,7 @@ navpage<template>
 		<div class="d-flex col-4 my-1 ms-auto">
 			<div class="col-4 align-self-center text-light">Finding SanBau</div>
 			<input
-				class="col-6 px-3 py-2 border rounded bg-dark text-light"
+				class="col-6 px-3 py-2 border border-secondary rounded bg-dark text-light"
 				type="text"
 				placeholder="Plate/Nickname"
 				maxlength="20"

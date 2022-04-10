@@ -5,26 +5,50 @@ navpage<template>
 			type="button"
 			@click="show_fab"
 		>+</div>
-		<div class="bg-dark border input" v-if="fab == 1">
+		<div class="bg-dark border border-secondary input" v-if="fab == 1">
+			<div
+				type="button"
+				class="position-absolute top-0 end-0 btn-close btn-close-white"
+				@click="show_fab"
+			></div>
 			<div class="row w-100 h-75 mx-auto mt-3">
 				<div class="col-9">
 					<div class="form-floating">
-						<textarea id="input" class="zero text-light bg-dark h-100 form-control txt" v-model="input">{{ input }}</textarea>
+						<textarea
+							id="input"
+							class="zero text-light border-secondary bg-dark h-100 lh-base form-control txt"
+							v-model="input"
+						>{{ input }}</textarea>
 						<label for="input" class="text-light">{{ label }}</label>
 					</div>
 				</div>
-				<div class="col w-25 ms-3 me-4 g-1 flex-column d-flex h-100">
-					<div type="button" class="border rounded badge mb-2 text-success" @click="post">post</div>
-					<div type="button" class="border rounded mb-2 badge text-danger" @click="clear">clear</div>
-					<div type="button" class="border rounded badge mb-2 text-warning" @click="reset">reset</div>
-					<div type="button" class="border rounded badge mb-2 text-info" @click="about">about</div>
-					<div type="button" class="border rounded badge mt-auto" @click="show_fab">close</div>
+				<div class="col ps-0 me-3 flex-column d-flex">
+					<div
+						type="button"
+						class="border btn-block border-secondary rounded my-2 text-center text-success"
+						@click="post"
+					>Post</div>
+					<div
+						type="button"
+						class="border btn-block border-secondary rounded my-2 text-danger text-center"
+						@click="clear"
+					>Clear</div>
+					<div
+						type="button"
+						class="border btn-block border-secondary rounded my-2 text-warning text-center"
+						@click="reset"
+					>Reset</div>
+					<div
+						type="button"
+						class="border btn-block border-secondary text-center rounded my-2 text-info"
+						@click="about"
+					>About</div>
 				</div>
 			</div>
-			<div class="row mt-3 mx-2">
+			<div class="row my-2 mx-2 align-items-center">
 				<div class="col-2">Author</div>
 				<input
-					class="col-5 bg-dark rounded border text-light"
+					class="col-5 py-2 bg-dark rounded border border-secondary text-light px-2"
 					type="text"
 					placeholder="八卦山下痣九"
 					maxlength="50"
@@ -36,11 +60,11 @@ navpage<template>
 			<template v-for="rec in messages">
 				<div class="col-2 h-25" :style="rec.bg" @click="hello(rec.msg, rec.nic)">
 					<div
-						class="zero text-light h-75 mt-2 overflow-auto text-break text-wrap txt"
+						class="zero text-light h-75 mt-2 overflow-auto text-break text-wrap txt lh-sm"
 						v-if="rec.msg != ''"
 					>{{ rec.msg }}</div>
 					<div
-						class="zero text-light d-flex align-self-center justify-content-end fw-light fs-6"
+						class="zero text-light d-flex align-self-center justify-content-end fw-light small"
 						v-if="rec.date != ''"
 					>{{ rec.date }}</div>
 				</div>
@@ -52,11 +76,12 @@ navpage<template>
 <style>
 .input {
 	width: 40%;
-	height: 50%;
-	top: 30%;
+	height: 55%;
+	top: 27.5%;
 	left: 30%;
 	border-radius: 10px;
 	position: fixed;
+	filter: opacity(0.95);
 }
 
 .fab {
@@ -102,7 +127,7 @@ const db = getDatabase(app);
 const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider('6LcBNv4dAAAAAIvtoqY-KvLMdO1rTdPFhM2uxlYW'),
 });
-let grid = 60
+let grid = 36
 let input = ref("")
 let label = ref("")
 let nickname = ref("")
@@ -181,34 +206,33 @@ function post() {
 		label.value = "Oops!"
 	}
 	if (msg != "") {
-		get(child(gref(db, "/msg/"), "flag"))
-			.then((e) => {
-				let flag = e.val()
-				if (flag >= grid) {
-					id = 1
-				} else {
-					id = flag + 1;
-				}
-				let options = {
-					day: 'numeric',
-					month: 'short',
-					year: 'numeric',
-					hour: '2-digit',
-					minute: '2-digit',
-					hour12: false,
-				};
-				set(gref(db, `/msg/${id}`), {
-					msg: msg,
-					date: new Date().toLocaleString('en-US', options),
-					bg: random_bg(),
-					nic: nic
-				});
-				update(gref(db, '/msg/'), {
-					flag: id,
-				})
-				init()
-				fab.value = 0
+		get(gref(db, "/msg/flag")).then((e) => {
+			let flag = e.val()
+			if (flag >= grid) {
+				id = 1
+			} else {
+				id = flag + 1;
+			}
+			let options = {
+				day: 'numeric',
+				month: 'short',
+				year: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+				hour12: false,
+			};
+			set(gref(db, `/msg/${id}`), {
+				msg: msg,
+				date: new Date().toLocaleString('en-US', options),
+				bg: random_bg(),
+				nic: nic
+			});
+			update(gref(db, '/msg/'), {
+				flag: id,
 			})
+			init()
+			fab.value = 0
+		})
 	}
 }
 
