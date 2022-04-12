@@ -1,4 +1,4 @@
-navpage<template>
+<template>
 	<div v-if="nav.show_msg == true" class="txt">
 		<div
 			class="bg-dark fab text-warning fs-1 lh-1 fw-bolder text-center"

@@ -1,7 +1,3 @@
-#map {
-    height: 90vh;
-    filter: brightness(.7) contrast(2) saturate(.5);
-}
 
 body {
     overflow: clip;

@@ -5,7 +5,6 @@
 		<div class="navbar-brand fs-6" type="button" :class="text_class.about" @click="about">About</div>
 		<div class="navbar-brand fs-6" type="button" :class="text_class.msg" @click="msg">Message Board</div>
 		<div class="navbar-brand fs-6" type="button" @click="github">GitHub</div>
-
 		<div class="d-flex col-4 my-1 ms-auto">
 			<div class="col-4 align-self-center text-light">Finding SanBau</div>
 			<input
