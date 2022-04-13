@@ -107,6 +107,7 @@ const appCheck = initializeAppCheck(app, {
 
 let map, lat, lng, marker_point, center_coord;
 let marker = L.marker();
+let your_marker = L.marker();
 let bau_bau_marker = L.layerGroup()
 let input = ref({ type: "car" });
 let roundto = 7;
@@ -160,11 +161,15 @@ function post() {
 }
 
 function get_location() {
+	navigator.geolocation.getCurrentPosition((location) => {
+		lat = location.coords.latitude;
+		lng = location.coords.longitude;
+	})
 	map.setView([lat, lng]);
+	map.removeLayer(your_marker);
 	input.value.latlng = `${lat.toFixed(roundto)}, ${lng.toFixed(roundto)}`;
-	map.removeLayer(marker);
-	L.marker([lat, lng]).addTo(map).bindPopup("you're here").openPopup();
-	center_coord = [lat, lng]
+	your_marker = L.marker([lat, lng]).addTo(map).bindPopup("you're here").openPopup();
+	map_centered()
 }
 
 function upload() {
@@ -192,38 +197,36 @@ async function map_init() {
 			lng = location.coords.longitude;
 			map = L.map("map", {
 				center: [lat, lng],
-				zoom: 15,
+				zoom: 12,
 				attributionControl: true,
 				zoomControl: true,
 			});
 			L.tileLayer(
 				"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 			).addTo(map);
-			L.marker([lat, lng])
+			your_marker = L.marker([lat, lng])
 				.addTo(map)
 				.bindPopup("you're here")
 				.openPopup();
-			map.on("click", mouse_click);
-			map.on("mouseup", center_map)
 			center_coord = map.getCenter()
+			map.on("click", mouse_click);
+			map.on("moveend", map_centered)
+			map.on("zoomend", map_centered)
 		});
 	}
 }
 
-function center_map() {
+function map_centered() {
 	map.removeLayer(bau_bau_marker)
-	bau_bau_marker = L.layerGroup().addTo(map)
 	center_coord = map.getCenter()
 	read()
+	bau_bau_marker = L.layerGroup().addTo(map)
 }
 
 function mouse_click(point) {
 	marker_point = point;
-	let roundto = 7;
 	set_marker()
-	input.value.latlng = `${point.latlng.lat.toFixed(
-		roundto
-	)}, ${point.latlng.lng.toFixed(roundto)}`;
+	input.value.latlng = `${point.latlng.lat.toFixed(roundto)}, ${point.latlng.lng.toFixed(roundto)}`;
 }
 
 function set_marker() {
@@ -258,7 +261,7 @@ async function read() {
 	}
 	tag.forEach(element => {
 		let dist = L.latLng(element.latlng.split(",")).distanceTo(center_coord) / 1000
-		if (dist <= 20) {
+		if (dist <= 50) {
 			let html = `
 		<table width="250px">
 			<tr>
@@ -290,12 +293,8 @@ async function read() {
 				<td><a href=${element.appendix} target="_blank">Link</a></td>
 			</tr>
 		</table>`;
-			let bau_bau = L.marker(element.latlng.split(","), { icon: map_icon(element.type) })
-				// .addTo(map)
-				.bindPopup(html);
-
-			bau_bau_marker.addLayer(bau_bau)
-			// map.addLayer(bau_bau_marker)
+			L.marker(element.latlng.split(","), { icon: map_icon(element.type) })
+				.addTo(bau_bau_marker).bindPopup(html);
 		}
 	});
 }
@@ -358,14 +357,10 @@ function test() {
 }
 
 onMounted(async () => {
-	// console.log(test())
 	await map_init();
+	await read()
 	if (nav.value.show_map) {
 		window.addEventListener("focus", paste_url);
 	}
-	await read()
-	// console.log(L.latLng(23.5, 120).distanceTo(L.latLng(23.5, 121)) / 1000)
-	// console.log(L)
-
 });
 </script>
