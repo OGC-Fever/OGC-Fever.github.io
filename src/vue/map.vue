@@ -4,11 +4,11 @@
 			<div id="map"></div>
 		</div>
 		<div class="col-4 ps-0 pe-2">
-			<div class="row offset-3 my-2 ps-0">Adding SanBau Data</div>
+			<div class="row offset-3 my-1 ps-0 badge">Adding SanBau Data</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Nickname</div>
 				<input class="col rounded border py-2 bg-dark text-light border-secondary" type="text"
-					placeholder="300哥/祭央乂/馬維拉/韓總機" v-model="input.nickname" maxlength="20" />
+					placeholder="C300哥/祭央乂/馬維拉/韓總機" v-model="input.nickname" maxlength="20" />
 			</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Plate</div>
@@ -53,18 +53,23 @@
 					</svg>
 				</div>
 			</div>
-			<div class="row align-items-center">
+			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">appendix</div>
 				<input class="col border border-secondary rounded py-2 bg-dark text-secondary" type="url"
-					placeholder="upload image/video" v-model="input.link" @click="open_link" />
+					placeholder="Imgur Image/Video (option)" v-model="input.link">
 				<div class="col-2 text-center" @click="upload" type="button" title="link to imgur">
 					<img class="col mw-100" src="https://s.imgur.com/images/favicon.png" />
 				</div>
 			</div>
-			<div class="row mt-2 justify-content-center">
-				<div class="col-3 badge fs-6 border border-secondary text-success me-1 ms-1 py-2" type="button"
+			<div class="row align-items-center">
+				<div class="col-3 ps-2">News</div>
+				<input class="col border border-secondary rounded py-2 bg-dark text-secondary" type="url"
+					placeholder="News Link (option)" v-model="input.news">
+			</div>
+			<div class="row mt-1 justify-content-center">
+				<div class="col-3 badge fs-6 border border-secondary text-success me-1 ms-1 py-1" type="button"
 					@click="post">Add</div>
-				<div class="col-3 badge fs-6 border border-secondary text-danger py-2" type="button" @click="clear">
+				<div class="col-3 badge fs-6 border border-secondary text-danger py-1" type="button" @click="clear">
 					Clear</div>
 			</div>
 		</div>
@@ -80,11 +85,10 @@
 
 <script setup>
 import { initializeApp } from 'firebase/app';
-// import { getAnalytics } from "firebase/analytics";
-import { getDatabase, ref as gref, set, onValue, get, child, update } from "firebase/database";
+import { getDatabase, ref as gref, set, get, update } from "firebase/database";
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { nav } from "../js/global.mjs";
-import { ref, onMounted, watch, watchPostEffect } from "vue";
+import { ref, onMounted } from "vue";
 import L from "leaflet";
 
 const firebaseConfig = {
@@ -99,9 +103,9 @@ const firebaseConfig = {
 	measurementId: "G-QBBG1SGW3K"
 };
 const app = initializeApp(firebaseConfig);
-// const analytics = getAnalytics(app);
 const db = getDatabase(app);
-const appCheck = initializeAppCheck(app, {
+// const appCheck =
+initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider('6LcBNv4dAAAAAIvtoqY-KvLMdO1rTdPFhM2uxlYW'),
 });
 
@@ -123,7 +127,8 @@ function post() {
 		behavior: input.value.behavior,
 		address: input.value.address,
 		latlng: input.value.latlng,
-		appendix: input.value.appendix
+		appendix: input.value.appendix,
+		news: input.value.news
 	}
 	if (data.nickname == null || data.plate == null || data.date == null || data.time == null || data.behavior == null || data.latlng == null) {
 		return
@@ -151,7 +156,8 @@ function post() {
 			date: data.date,
 			time: data.time,
 			latlng: data.latlng,
-			appendix: data.appendix
+			appendix: data.appendix,
+			news: data.news
 		});
 		update(gref(db, '/map/'), {
 			count: id,
@@ -176,14 +182,6 @@ function upload() {
 	window.open("https://imgur.com/upload");
 }
 
-function open_link() {
-	if (input.value.link != "" && input.value.link != null) {
-		if (confirm("open link in new window?")) {
-			window.open(input.value.link);
-		}
-	}
-}
-
 function clear() {
 	input.value = [];
 	input.value.type = "car";
@@ -192,12 +190,12 @@ function clear() {
 
 async function map_init() {
 	if (navigator.geolocation) {
-		navigator.geolocation.getCurrentPosition((location) => {
+		navigator.geolocation.getCurrentPosition(async (location) => {
 			lat = location.coords.latitude;
 			lng = location.coords.longitude;
 			map = L.map("map", {
 				center: [lat, lng],
-				zoom: 12,
+				zoom: 10,
 				attributionControl: true,
 				zoomControl: true,
 			});
@@ -208,19 +206,18 @@ async function map_init() {
 				.addTo(map)
 				.bindPopup("you're here")
 				.openPopup();
-			center_coord = map.getCenter()
+			await map_centered()
 			map.on("click", mouse_click);
 			map.on("moveend", map_centered)
-			map.on("zoomend", map_centered)
 		});
 	}
 }
 
-function map_centered() {
+async function map_centered() {
 	map.removeLayer(bau_bau_marker)
-	center_coord = map.getCenter()
-	read()
+	center_coord = await map.getCenter()
 	bau_bau_marker = L.layerGroup().addTo(map)
+	await read()
 }
 
 function mouse_click(point) {
@@ -262,70 +259,37 @@ async function read() {
 	tag.forEach(element => {
 		let dist = L.latLng(element.latlng.split(",")).distanceTo(center_coord) / 1000
 		if (dist <= 50) {
-			let html = `
-		<table width="250px">
-			<tr>
-				<td width="100px">Nickname</td>
-				<td width="150px">${element.nickname}</td>
-			</tr>
-			<tr>
-				<td>Plate</td>
-				<td>${element.plate}</td>
-			</tr>
-			<tr>
-				<td>Date</td>
-				<td>${element.date}</td>
-			</tr>
-			<tr>
-				<td>Time</td>
-				<td>${element.time}</td>
-			</tr>
-			<tr>
-				<td>Behavior</td>
-				<td>${element.behavior}</td>
-			</tr>
-			<tr>
-				<td>Address</td>
-				<td>${element.address}</td>
-			</tr>
-			<tr>
-				<td>Appendix</td>
-				<td><a href=${element.appendix} target="_blank">Link</a></td>
-			</tr>
-		</table>`;
+			let html = `<table style="width:350px">`
+			if (element.nickname != "") {
+				html += `<tr><td style="width:150px">Nickname</td><td style="width:200px">${element.nickname}</td></tr>`
+			}
+			if (element.plate != "") {
+				html += `<tr><td>Plate</td><td>${element.plate}</td></tr>`
+			}
+			if (element.date != "") {
+				html += `<tr><td>Date</td><td>${element.date}</td></tr>`
+			}
+			if (element.time != "") {
+				html += `<tr><td>Time</td><td>${element.time}</td></tr>`
+			}
+			if (element.behavior != "") {
+				html += `<tr><td>Behavior</td><td>${element.behavior}</td></tr>`
+			}
+			if (element.address != "") {
+				html += `<tr><td>Address</td><td>${element.address}</td></tr>`
+			}
+			if (element.appendix != "") {
+				html += `<tr><td>Image/Video</td><td><a href=${element.appendix} target="_blank">Link</a></td></tr>`
+			}
+			if (element.news != "") {
+				html += `<tr><td>News</td><td><a href=${element.news} target="_blank">News</a></td></tr>`
+			}
+			html += "</table>"
 			L.marker(element.latlng.split(","), { icon: map_icon(element.type) })
 				.addTo(bau_bau_marker).bindPopup(html);
 		}
 	});
 }
-
-function paste_url() {
-	navigator.clipboard.readText().then(async (clipText) => {
-		try {
-			if (clipText.length > 1 && clipText.includes("http")) {
-				let resp = await fetch(clipText, { mode: "no-cors" });
-				if (resp.status != 404) {
-					input.value.link = clipText;
-				}
-			} else {
-				input.value.link = "";
-			}
-		} catch (error) {
-			input.value.link = "";
-		}
-	});
-}
-
-watch(
-	() => nav.value.show_map,
-	(value) => {
-		if (value) {
-			window.addEventListener("focus", paste_url);
-		} else {
-			window.removeEventListener("focus", paste_url)
-		}
-	}
-)
 
 function test() {
 	function ran() {
@@ -339,6 +303,9 @@ function test() {
 		return `${lat}, ${lng}`
 	}
 	for (let index = 1; index < 100; index++) {
+		if (index % 2 == 0) {
+
+		}
 		set(gref(db, `/map/${index}`), {
 			nickname: `name-${index}`,
 			plate: `ABC-${index}`,
@@ -348,8 +315,15 @@ function test() {
 			date: "2022/2/2",
 			time: "44:44:44",
 			latlng: latlng(),
-			appendix: "nnn"
+			appendix: "nnn",
+			news: "nnn"
 		});
+		if (index % 2 == 0) {
+			update(gref(db, `/map/${index}`), {
+				appendix: "",
+				news: ""
+			});
+		}
 		update(gref(db, '/map/'), {
 			count: index,
 		})
@@ -357,10 +331,7 @@ function test() {
 }
 
 onMounted(async () => {
+	test()
 	await map_init();
-	await read()
-	if (nav.value.show_map) {
-		window.addEventListener("focus", paste_url);
-	}
 });
 </script>

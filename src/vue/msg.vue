@@ -106,8 +106,7 @@
 import { ref, onMounted } from "vue";
 import { nav } from "../js/global.mjs";
 import { initializeApp } from 'firebase/app';
-// import { getAnalytics } from "firebase/analytics";
-import { getDatabase, ref as gref, set, onValue, get, child, update } from "firebase/database";
+import { getDatabase, ref as gref, set, onValue, get, update } from "firebase/database";
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 const firebaseConfig = {
@@ -122,7 +121,6 @@ const firebaseConfig = {
 	measurementId: "G-QBBG1SGW3K"
 };
 const app = initializeApp(firebaseConfig);
-// const analytics = getAnalytics(app);
 const db = getDatabase(app);
 const appCheck = initializeAppCheck(app, {
 	provider: new ReCaptchaV3Provider('6LcBNv4dAAAAAIvtoqY-KvLMdO1rTdPFhM2uxlYW'),
@@ -173,13 +171,8 @@ function read(index) {
 }
 
 function about() {
-	let about = `pure front end message board
-	language:javascript
-	framework:Bootstrap,Vue.js
-	database:firebase
-============================
-author:OrzOGC
-	junior amatuer developer
+	let about = `author: OrzOGC
+	non-professional developer
 	senior mechanical designer
 	senior part-time gofer
 	and road rage monster`
