@@ -1,11 +1,13 @@
-## Cyber Butchers 
+# Cyber Butchers 
 
-language:javascript  
-framework:Bootstrap,Vue.js  
-database:firebase  
+- framework:Bootstrap,Vue.js  
+- database:firebase  
 
-# SanBau Map
+## SanBau Map
 - point out SanBau on map
 
-# Message Board
+## About
+- god damn fucking cat slaves
+
+## Message Board
 - pure front end message board  

@@ -3,7 +3,7 @@
 		<div class="col-8 mt-1 ps-1">
 			<div id="map"></div>
 		</div>
-		<div class="col-4 ps-0 pe-2">
+		<div class="col-4 ps-0 pe-2" v-if="nav.show_search == false">
 			<div class="row offset-3 my-1 ps-0 badge">Adding SanBau Data</div>
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">Nickname</div>
@@ -56,10 +56,11 @@
 			<div class="row align-items-center mb-1">
 				<div class="col-3 ps-2">appendix</div>
 				<input class="col border border-secondary rounded py-2 bg-dark text-secondary" type="url"
-					placeholder="Imgur Image/Video (option)" v-model="input.link">
-				<div class="col-2 text-center" @click="upload" type="button" title="link to imgur">
-					<img class="col mw-100" src="https://s.imgur.com/images/favicon.png" />
-				</div>
+					placeholder="Imgur Url (option)" v-model="input.link">
+				<figure class="figure col-2 my-0 py-0 text-center">
+					<img class="img-fluid" @click="upload" type="button" title="link to imgur"
+						src="https://s.imgur.com/images/favicon.png" />
+				</figure>
 			</div>
 			<div class="row align-items-center">
 				<div class="col-3 ps-2">News</div>
@@ -73,22 +74,71 @@
 					Clear</div>
 			</div>
 		</div>
+		<div class="col-4 px-0 my-1" v-if="nav.show_search == true">
+			<div class="row" style="overflow: auto;height:30vh;">
+				<table class="table table-hover table-sm">
+					<thead>
+						<tr>
+							<th class="col-3">Plate</th>
+							<th class="col-4">Nickname</th>
+							<th class="col">Date/Time</th>
+						</tr>
+					</thead>
+					<tbody>
+						<template v-for="n in test1">
+							<tr>
+								<td>{{ n.plate }}</td>
+								<td>{{ n.nickname }}</td>
+								<td>{{ n.date }}-{{ n.time }}</td>
+							</tr>
+						</template>
+					</tbody>
+				</table>
+			</div>
+			<div class="row">
+				<Details open>
+					<div>{{ search }}</div>
+					<div>Nickname</div>
+					<div>Plate</div>
+					<div>Date</div>
+					<div>Time</div>
+					<div>Behavior</div>
+					<div>Address</div>
+					<div>LatLng</div>
+					<div>appendix</div>
+					<div>News</div>
+				</Details>
+			</div>
+		</div>
 	</div>
 </template>
 
 <style>
 #map {
-	height: 90vh;
+	height: 91vh;
 	filter: brightness(.7) contrast(2) saturate(.5);
+}
+
+.leaflet-popup-tip,
+.leaflet-popup-content-wrapper {
+	background-color: currentColor;
+	opacity: .75;
+}
+
+.leaflet-popup-content {
+	color: whitesmoke;
+	font-size: medium;
+	margin: 10px;
+	width: max-content;
 }
 </style>
 
 <script setup>
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref as gref, set, get, update } from "firebase/database";
+import { getDatabase, ref as gref, set, get, update, query, equalTo, orderByChild, limitToFirst } from "firebase/database";
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { nav } from "../js/global.mjs";
-import { ref, onMounted } from "vue";
+import { nav, search } from "../js/global.mjs";
+import { ref, onMounted, watch } from "vue";
 import L from "leaflet";
 
 const firebaseConfig = {
@@ -171,7 +221,7 @@ function get_location() {
 		lat = location.coords.latitude;
 		lng = location.coords.longitude;
 	})
-	map.setView([lat, lng]);
+	map.setView([lat, lng], 10);
 	map.removeLayer(your_marker);
 	input.value.latlng = `${lat.toFixed(roundto)}, ${lng.toFixed(roundto)}`;
 	your_marker = L.marker([lat, lng]).addTo(map).bindPopup("you're here").openPopup();
@@ -243,48 +293,45 @@ function map_icon(element) {
 	});
 	return icon
 }
-
+let test1 = []
 async function read() {
+	let count = await get(gref(db, "/map"))
+	count = Object.keys(count.val()).length
 	let tag = []
-	let count = await get(gref(db, "/map/count"))
-	if (count.val() == null) {
-		count = 0
-		return
-	} else {
-		for (let index = 1; index <= count.val(); index++) {
-			let tmp = await get(gref(db, `/map/${index}`))
-			tag.push(tmp.val())
-		}
+	for (let index = 1; index <= count; index++) {
+		let tmp = await get(gref(db, `/map/${index}`))
+		tag.push(tmp.val())
+		test1.push(tmp.val())
 	}
 	tag.forEach(element => {
 		let dist = L.latLng(element.latlng.split(",")).distanceTo(center_coord) / 1000
 		if (dist <= 50) {
-			let html = `<table style="width:350px">`
+			let html = `<div class="row row-cols-2">`
 			if (element.nickname != "") {
-				html += `<tr><td style="width:150px">Nickname</td><td style="width:200px">${element.nickname}</td></tr>`
+				html += `<div class="col-4">Nickname</div><div class="col">${element.nickname}</div>`
 			}
 			if (element.plate != "") {
-				html += `<tr><td>Plate</td><td>${element.plate}</td></tr>`
+				html += `<div class="col-4">Plate</div><div class="col">${element.plate}</div>`
 			}
 			if (element.date != "") {
-				html += `<tr><td>Date</td><td>${element.date}</td></tr>`
+				html += `<div  class="col-4">Date</div><div class="col">${element.date}</div>`
 			}
 			if (element.time != "") {
-				html += `<tr><td>Time</td><td>${element.time}</td></tr>`
+				html += `<div class="col-4">Time</div><div class="col">${element.time}</div>`
 			}
 			if (element.behavior != "") {
-				html += `<tr><td>Behavior</td><td>${element.behavior}</td></tr>`
+				html += `<div class="col-4">Behavior</div><div class="col">${element.behavior}</div>`
 			}
 			if (element.address != "") {
-				html += `<tr><td>Address</td><td>${element.address}</td></tr>`
+				html += `<div class="col-4">Address</div><div class="col">${element.address}</div>`
 			}
 			if (element.appendix != "") {
-				html += `<tr><td>Image/Video</td><td><a href=${element.appendix} target="_blank">Link</a></td></tr>`
+				html += `<div class="col-4">Imgur</div><div class="col"><a class="text-warning fw-bold" href=${element.appendix} target="_blank">Imgur Link</a></div>`
 			}
 			if (element.news != "") {
-				html += `<tr><td>News</td><td><a href=${element.news} target="_blank">News</a></td></tr>`
+				html += `<div class="col-4">News</div><div class="col"><a class="text-warning fw-bold" href=${element.news} target="_blank">News Link</a></div>`
 			}
-			html += "</table>"
+			html += `</div>`
 			L.marker(element.latlng.split(","), { icon: map_icon(element.type) })
 				.addTo(bau_bau_marker).bindPopup(html);
 		}
@@ -302,10 +349,7 @@ function test() {
 		let lng = (Math.random() * 2) + 120;
 		return `${lat}, ${lng}`
 	}
-	for (let index = 1; index < 100; index++) {
-		if (index % 2 == 0) {
-
-		}
+	for (let index = 1; index <= 100; index++) {
 		set(gref(db, `/map/${index}`), {
 			nickname: `name-${index}`,
 			plate: `ABC-${index}`,
@@ -324,14 +368,50 @@ function test() {
 				news: ""
 			});
 		}
-		update(gref(db, '/map/'), {
-			count: index,
-		})
+		// update(gref(db, '/map/'), {
+		// 	count: index,
+		// })
 	}
 }
 
 onMounted(async () => {
 	test()
 	await map_init();
+	await test2()
 });
+
+async function test2() {
+	let qq = 0
+	let qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("human"))
+	let tmp = await get(qstring)
+	let count = Object.keys(tmp.val()).length
+	qq += count
+
+	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("car"))
+	tmp = await get(qstring)
+	count = Object.keys(tmp.val()).length
+	qq += count
+
+	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("motor"))
+	tmp = await get(qstring)
+	count = Object.keys(tmp.val()).length
+	qq += count
+
+	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("truck"))
+	tmp = await get(qstring)
+	count = Object.keys(tmp.val()).length
+	qq += count
+
+	console.log(qq)
+}
+
+// watch(
+// 	() => nav.value.show_search,
+// 	(newValue, _) => {
+// 		if (newValue) {
+// 			test2()
+// 			console.log("test")
+// 		}
+// 	}
+// )
 </script>
