@@ -24,7 +24,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { nav, search } from "../js/global.mjs";
-
 let text_class = ref({
 	map: "",
 	about: "",
@@ -69,7 +68,5 @@ function go() {
 
 onMounted(() => {
 	map();
-	// about();
-	// msg();
 });
 </script>

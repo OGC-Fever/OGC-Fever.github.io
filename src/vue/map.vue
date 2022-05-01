@@ -74,9 +74,12 @@
 					Clear</div>
 			</div>
 		</div>
-		<div class="col-4 px-0 my-1" v-if="nav.show_search == true">
-			<div class="row" style="overflow: auto;height:30vh;">
-				<table class="table table-hover table-sm">
+		<div class="col-4 px-1 my-1 " v-if="nav.show_search == true">
+			<div class="search_list row">
+				<div class="fs-1 text-center" v-if="searchList.length == 0">
+					~no data~
+				</div>
+				<table class="table table-hover table-sm" v-if="searchList.length != 0">
 					<thead>
 						<tr>
 							<th class="col-3">Plate</th>
@@ -85,29 +88,15 @@
 						</tr>
 					</thead>
 					<tbody>
-						<template v-for="n in test1">
-							<tr>
-								<td>{{ n.plate }}</td>
-								<td>{{ n.nickname }}</td>
-								<td>{{ n.date }}-{{ n.time }}</td>
+						<template v-for="el in searchList">
+							<tr @click="popup(el)">
+								<td>{{ el.plate }}</td>
+								<td>{{ el.nickname }}</td>
+								<td>{{ el.date }}-{{ el.time }}</td>
 							</tr>
 						</template>
 					</tbody>
 				</table>
-			</div>
-			<div class="row">
-				<Details open>
-					<div>{{ search }}</div>
-					<div>Nickname</div>
-					<div>Plate</div>
-					<div>Date</div>
-					<div>Time</div>
-					<div>Behavior</div>
-					<div>Address</div>
-					<div>LatLng</div>
-					<div>appendix</div>
-					<div>News</div>
-				</Details>
 			</div>
 		</div>
 	</div>
@@ -131,11 +120,15 @@
 	margin: 10px;
 	width: max-content;
 }
+
+.search_list {
+	height: 90vh;
+}
 </style>
 
 <script setup>
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref as gref, set, get, update, query, equalTo, orderByChild, limitToFirst } from "firebase/database";
+import { getDatabase, ref as gref, set, get, update, query, equalTo, startAt, orderByChild, } from "firebase/database";
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { nav, search } from "../js/global.mjs";
 import { ref, onMounted, watch } from "vue";
@@ -165,6 +158,8 @@ let your_marker = L.marker();
 let bau_bau_marker = L.layerGroup()
 let input = ref({ type: "car" });
 let roundto = 7;
+let searchList = ref([])
+
 
 function post() {
 	let id
@@ -293,52 +288,25 @@ function map_icon(element) {
 	});
 	return icon
 }
-let test1 = []
+
 async function read() {
 	let count = await get(gref(db, "/map"))
 	count = Object.keys(count.val()).length
 	let tag = []
-	for (let index = 1; index <= count; index++) {
+	for (let index = 1; index < count; index++) {
 		let tmp = await get(gref(db, `/map/${index}`))
 		tag.push(tmp.val())
-		test1.push(tmp.val())
 	}
 	tag.forEach(element => {
 		let dist = L.latLng(element.latlng.split(",")).distanceTo(center_coord) / 1000
 		if (dist <= 50) {
-			let html = `<div class="row row-cols-2">`
-			if (element.nickname != "") {
-				html += `<div class="col-4">Nickname</div><div class="col">${element.nickname}</div>`
-			}
-			if (element.plate != "") {
-				html += `<div class="col-4">Plate</div><div class="col">${element.plate}</div>`
-			}
-			if (element.date != "") {
-				html += `<div  class="col-4">Date</div><div class="col">${element.date}</div>`
-			}
-			if (element.time != "") {
-				html += `<div class="col-4">Time</div><div class="col">${element.time}</div>`
-			}
-			if (element.behavior != "") {
-				html += `<div class="col-4">Behavior</div><div class="col">${element.behavior}</div>`
-			}
-			if (element.address != "") {
-				html += `<div class="col-4">Address</div><div class="col">${element.address}</div>`
-			}
-			if (element.appendix != "") {
-				html += `<div class="col-4">Imgur</div><div class="col"><a class="text-warning fw-bold" href=${element.appendix} target="_blank">Imgur Link</a></div>`
-			}
-			if (element.news != "") {
-				html += `<div class="col-4">News</div><div class="col"><a class="text-warning fw-bold" href=${element.news} target="_blank">News Link</a></div>`
-			}
-			html += `</div>`
 			L.marker(element.latlng.split(","), { icon: map_icon(element.type) })
-				.addTo(bau_bau_marker).bindPopup(html);
+				.addTo(bau_bau_marker).bindPopup(popup_html(element));
 		}
 	});
 }
 
-function test() {
+async function mock_data() {
 	function ran() {
 		let type = ["human", "car", "motor", "truck"]
 		let flag = Math.round(Math.random() * 3);
@@ -362,56 +330,71 @@ function test() {
 			appendix: "nnn",
 			news: "nnn"
 		});
-		if (index % 2 == 0) {
-			update(gref(db, `/map/${index}`), {
-				appendix: "",
-				news: ""
-			});
-		}
-		// update(gref(db, '/map/'), {
-		// 	count: index,
-		// })
 	}
 }
 
 onMounted(async () => {
-	test()
 	await map_init();
-	await test2()
 });
 
-async function test2() {
-	let qq = 0
-	let qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("human"))
-	let tmp = await get(qstring)
-	let count = Object.keys(tmp.val()).length
-	qq += count
-
-	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("car"))
-	tmp = await get(qstring)
-	count = Object.keys(tmp.val()).length
-	qq += count
-
-	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("motor"))
-	tmp = await get(qstring)
-	count = Object.keys(tmp.val()).length
-	qq += count
-
-	qstring = query(gref(db, "/map"), orderByChild("type"), equalTo("truck"))
-	tmp = await get(qstring)
-	count = Object.keys(tmp.val()).length
-	qq += count
-
-	console.log(qq)
+function popup_html(e) {
+	let html = `<div class="row row-cols-2">`
+	if (e.nickname != "") {
+		html += `<div class="col-4">Nickname</div><div class="col">${e.nickname}</div>`
+	}
+	if (e.plate != "") {
+		html += `<div class="col-4">Plate</div><div class="col">${e.plate}</div>`
+	}
+	if (equalTo.date != "") {
+		html += `<div  class="col-4">Date</div><div class="col">${e.date}</div>`
+	}
+	if (e.time != "") {
+		html += `<div class="col-4">Time</div><div class="col">${e.time}</div>`
+	}
+	if (e.behavior != "") {
+		html += `<div class="col-4">Behavior</div><div class="col">${e.behavior}</div>`
+	}
+	if (e.address != "") {
+		html += `<div class="col-4">Address</div><div class="col">${e.address}</div>`
+	}
+	if (e.appendix != "") {
+		html += `<div class="col-4">Imgur</div><div class="col"><a class="text-warning fw-bold" href=${e.appendix} target="_blank">Imgur Link</a></div>`
+	}
+	if (e.news != "") {
+		html += `<div class="col-4">News</div><div class="col"><a class="text-warning fw-bold" href=${e.news} target="_blank">News Link</a></div>`
+	}
+	html += `</div>`
+	return html
 }
 
-// watch(
-// 	() => nav.value.show_search,
-// 	(newValue, _) => {
-// 		if (newValue) {
-// 			test2()
-// 			console.log("test")
-// 		}
-// 	}
-// )
+function popup(e) {
+	let latlng = e.latlng.split(",")
+	map.setView(latlng, 10);
+	map_centered()
+	L.popup({ offset: L.point(0, -15) }).setLatLng(latlng).setContent(popup_html(e)).openOn(map);
+}
+
+watch(
+	() => search.value,
+	async (newValue) => {
+		if (newValue != "") {
+			searchList.value = []
+			let queryPlate = query(gref(db, "/map"), orderByChild("plate"), startAt(search.value))
+			let tmp1 = await get(queryPlate)
+			let queryNickname = query(gref(db, "/map"), orderByChild("nickname"), startAt(search.value))
+			let tmp2 = await get(queryNickname)
+			tmp1.forEach(el => {
+				if (el.val() != null) {
+					searchList.value.push(el.val())
+				}
+			})
+			tmp2.forEach(el => {
+				if (el.val() != null) {
+					searchList.value.push(el.val())
+				}
+			})
+			console.log(searchList.value)
+		}
+	}
+)
 </script>
