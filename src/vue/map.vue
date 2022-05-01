@@ -75,7 +75,7 @@
 			</div>
 		</div>
 		<div class="col-4 px-1 my-1 " v-if="nav.show_search == true">
-			<div class="search_list row">
+			<div class="row">
 				<div class="fs-1 text-center" v-if="searchList.length == 0">
 					~no data~
 				</div>
@@ -110,7 +110,7 @@
 
 .leaflet-popup-tip,
 .leaflet-popup-content-wrapper {
-	background-color: currentColor;
+	background-color: black;
 	opacity: .75;
 }
 
@@ -119,10 +119,6 @@
 	font-size: medium;
 	margin: 10px;
 	width: max-content;
-}
-
-.search_list {
-	height: 90vh;
 }
 </style>
 
@@ -161,7 +157,7 @@ let roundto = 7;
 let searchList = ref([])
 
 
-function post() {
+async function post() {
 	let id
 	let data = {
 		nickname: input.value.nickname,
@@ -186,29 +182,28 @@ function post() {
 			data[key] = ""
 		}
 	}
-	get(gref(db, "/map/count")).then((e) => {
-		try {
-			id = e.val() + 1
-		} catch (error) {
-			id = 1
-		}
-		set(gref(db, `/map/${id}`), {
-			nickname: data.nickname,
-			plate: data.plate,
-			type: data.type,
-			behavior: data.behavior,
-			address: data.address,
-			date: data.date,
-			time: data.time,
-			latlng: data.latlng,
-			appendix: data.appendix,
-			news: data.news
-		});
-		update(gref(db, '/map/'), {
-			count: id,
-		})
-	})
+	let count = await get(gref(db, "/map"))
+	try {
+		count = Object.keys(count.val()).length
+		id = count + 1
+	} catch (e) {
+		count = 0
+		id = 1
+	}
+	set(gref(db, `/map/${id}`), {
+		nickname: data.nickname,
+		plate: data.plate,
+		type: data.type,
+		behavior: data.behavior,
+		address: data.address,
+		date: data.date,
+		time: data.time,
+		latlng: data.latlng,
+		appendix: data.appendix,
+		news: data.news
+	});
 	clear()
+	await read()
 }
 
 function get_location() {
@@ -266,6 +261,7 @@ async function map_centered() {
 }
 
 function mouse_click(point) {
+	nav.value.show_search = false
 	marker_point = point;
 	set_marker()
 	input.value.latlng = `${point.latlng.lat.toFixed(roundto)}, ${point.latlng.lng.toFixed(roundto)}`;
@@ -291,9 +287,14 @@ function map_icon(element) {
 
 async function read() {
 	let count = await get(gref(db, "/map"))
-	count = Object.keys(count.val()).length
+	try {
+		count = Object.keys(count.val()).length
+	} catch (error) {
+		count = 0
+		return
+	}
 	let tag = []
-	for (let index = 1; index < count; index++) {
+	for (let index = 1; index <= count; index++) {
 		let tmp = await get(gref(db, `/map/${index}`))
 		tag.push(tmp.val())
 	}
@@ -334,6 +335,7 @@ async function mock_data() {
 }
 
 onMounted(async () => {
+	// mock_data()
 	await map_init();
 });
 
@@ -345,7 +347,7 @@ function popup_html(e) {
 	if (e.plate != "") {
 		html += `<div class="col-4">Plate</div><div class="col">${e.plate}</div>`
 	}
-	if (equalTo.date != "") {
+	if (e.date != "") {
 		html += `<div  class="col-4">Date</div><div class="col">${e.date}</div>`
 	}
 	if (e.time != "") {
@@ -376,24 +378,24 @@ function popup(e) {
 
 watch(
 	() => search.value,
-	async (newValue) => {
+	async (newValue, _) => {
 		if (newValue != "") {
-			searchList.value = []
-			let queryPlate = query(gref(db, "/map"), orderByChild("plate"), startAt(search.value))
-			let tmp1 = await get(queryPlate)
-			let queryNickname = query(gref(db, "/map"), orderByChild("nickname"), startAt(search.value))
-			let tmp2 = await get(queryNickname)
-			tmp1.forEach(el => {
+			searchList.value = [];
+			let queryPlate = query(gref(db, "/map"), orderByChild("plate"), equalTo(search.value));
+			let tmp1 = await get(queryPlate);
+			let queryNickname = query(gref(db, "/map"), orderByChild("nickname"), equalTo(search.value));
+			let tmp2 = await get(queryNickname);
+			tmp1.forEach((el) => {
 				if (el.val() != null) {
-					searchList.value.push(el.val())
+					searchList.value.push(el.val());
 				}
-			})
-			tmp2.forEach(el => {
-				if (el.val() != null) {
-					searchList.value.push(el.val())
+			});
+			tmp2.forEach(ele => {
+				if (ele.val() != null) {
+					searchList.value.push(ele.val());
 				}
-			})
-			console.log(searchList.value)
+			});
+			console.log(searchList.value.length);
 		}
 	}
 )
