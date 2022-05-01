@@ -115,6 +115,7 @@
 }
 
 .leaflet-popup-content {
+	background-color: black;
 	color: whitesmoke;
 	font-size: medium;
 	margin: 10px;
