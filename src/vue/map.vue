@@ -111,7 +111,7 @@
 .leaflet-popup,
 .leaflet-popup-tip,
 .leaflet-popup-content-wrapper {
-	background-color: black;
+	/* background-color: black; */
 	background: black;
 	opacity: .75;
 }
