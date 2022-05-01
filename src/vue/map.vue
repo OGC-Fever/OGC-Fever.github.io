@@ -108,16 +108,15 @@
 	filter: brightness(.7) contrast(2) saturate(.5);
 }
 
-.leaflet-popup,
+/* .leaflet-popup, */
 .leaflet-popup-tip,
 .leaflet-popup-content-wrapper {
-	/* background-color: black; */
-	background: black;
+	background-color: black !important;
 	opacity: .75;
 }
 
 .leaflet-popup-content {
-	background-color: black;
+	/* background-color: black !important; */
 	color: whitesmoke;
 	font-size: medium;
 	margin: 10px;
