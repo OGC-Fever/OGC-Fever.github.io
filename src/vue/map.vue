@@ -395,7 +395,6 @@ watch(
 					searchList.value.push(ele.val());
 				}
 			});
-			console.log(searchList.value.length);
 		}
 	}
 )
